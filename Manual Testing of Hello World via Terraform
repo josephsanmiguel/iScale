@@ -1,11 +1,11 @@
-This is a Step by Step guide to Create EC2 Instance in Terraform:
+This is a Step by Step guide to Create EC2 Instance in Terraform Manually:
 
 Step1: Login to EC2 machine via SSH
-      cd /Users/josephangelosanmiguel/Documents/iScale/
-      ssh -i Mykeypair.pem ec2-user@13.212.79.45
+      cd <path>
+      ssh -i <keypairname>.pem ec2-user@<IPv4 Public IP>
 
     Note: make sure to give permission to the Keypair:
-          chmod 0400 Mykeypair.pem
+          chmod 0400 <keypairname>.pem
 
 Step 2: Get the link address from the version of your machine and type:(Linux 32 bit in my case)
      
@@ -44,13 +44,13 @@ Step 6: Create a terraform File:
         
         Insert this in ec2.tf:
         provider "aws" {
-          access_key = "AKIATTJRJLSTYJNANVSW"
-          secret_key = "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"
-          region     = "ap-southeast-1"
+          access_key = "<access_key>"
+          secret_key = "<secret_key>"
+          region     = "<region>"
         }
 
         resource "aws_instance" "example" {
-          ami           = "ami-0e2e44c03b85f58b3"
+          ami           = "<ami image>"
           instance_type = "t2.micro"
 
         Note: Make sure that you have the access_key and scret key from the User.
