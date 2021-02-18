@@ -1,133 +1,70 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# CREATE ALL THE RESOURCES TO DEPLOY AN APP IN AN AUTO SCALING GROUP WITH AN ELB
-# This template runs a simple "Hello, World" web server in Auto Scaling Group (ASG) with an Elastic Load Balancer
-# (ELB) in front of it to distribute traffic across the EC2 Instances in the ASG.
+# This script was create by Joseph Angelo T. San Miguel 
+# Please feel free to add or comment on how can I improve more.
+# Provision a new application server and deploy the following application
+# This template runs a simple "Hello, World" web server on a single EC2 Instance
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # ----------------------------------------------------------------------------------------------------------------------
+# Come up with a way to deploy this app and write configuration-as-code to deploy it.
+# We are primarily using Terraform/Salt but feel free to use any Configuration Management tool (Chef, Puppet, Ansible, Salt) and/or Infrastructure-as-code (Terraform, Cloudformation, Pulumi) as you so choose.
+# ###### I chose Terraform and ran it on VSCODE #######
 # REQUIRE A SPECIFIC TERRAFORM VERSION OR HIGHER
 # ----------------------------------------------------------------------------------------------------------------------
 
 terraform {
-  # This module is now only being tested with Terraform 0.13.x. However, to make upgrading easier, we are setting
-  # 0.12.26 as the minimum version, as that version added support for required_providers with source URLs, making it
-  # forwards compatible with 0.13.x code.
+  # It only accepts Terraform version 0.12.26 or Higher
   required_version = ">= 0.12.26"
 }
 
 # ------------------------------------------------------------------------------
-# CONFIGURE OUR AWS CONNECTION
+# Main requirement is to deploy this to AWS. You can create a free-tier AWS account.
+# Connection to AWS
+# Please take note to change the value of the variables in variables.tf
+# (As a security measure, I did not hardcode the access key and secret key)
 # ------------------------------------------------------------------------------
 
 provider "aws" {
-  region = "ap-southeast-1"
-}
-
-
-# ---------------------------------------------------------------------------------------------------------------------
-# GET THE LIST OF AVAILABILITY ZONES IN THE CURRENT REGION
-# Every AWS accout has slightly different availability zones in each region. For example, one account might have
-# us-east-1a, us-east-1b, and us-east-1c, while another will have us-east-1a, us-east-1b, and us-east-1d. This resource
-# queries AWS to fetch the list for the current account and region.
-# ---------------------------------------------------------------------------------------------------------------------
-
-data "aws_availability_zones" "all" {}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# CREATE THE AUTO SCALING GROUP
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_autoscaling_group" "example" {
-  launch_configuration = aws_launch_configuration.example.id
-  availability_zones   = data.aws_availability_zones.all.names
-
-  min_size = 2
-  max_size = 10
-
-  load_balancers    = [aws_elb.example.name]
-  health_check_type = "ELB"
-
-  tag {
-    key                 = "Name"
-    value               = "terraform-asg-example"
-    propagate_at_launch = true
-  }
+  region = "ap-southeast-2"
+  access_key = var.aws_access_key_id_var
+  secret_key = var.aws_secret_access_key_id_var
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# CREATE A LAUNCH CONFIGURATION THAT DEFINES EACH EC2 INSTANCE IN THE ASG
+# Create an EC2 Instance
 # ---------------------------------------------------------------------------------------------------------------------
 
-resource "aws_launch_configuration" "example" {
-  # SSD Volume Type in ap-southeast-1
-  image_id        = "ami-0e2e44c03b85f58b3"
-  instance_type   = "t2.micro"
-  security_groups = [aws_security_group.instance.id]
-  
+resource "aws_instance" "example" {
+  ami                    = "ami-04f77aa5970939148"
+  instance_type          = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.instance.id]
 
   user_data = <<-EOF
               #!/bin/bash
-              echo "Hello, World" > index.html
+              sudo su
+              yum update -y
+              yum install -y httpd.x86_64
+              systemctl start httpd.service
+              systemctl enable httpd.service
+              bash -c 'echo Hello World > /var/www/html/index.html'
               nohup busybox httpd -f -p "${var.server_port}" &
               EOF
 
-  # Whenever using a launch configuration with an auto scaling group, you must set create_before_destroy = true.
-  # https://www.terraform.io/docs/providers/aws/r/launch_configuration.html
-  lifecycle {
-    create_before_destroy = true
+  tags = {
+    Name = "terraform-example"
   }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
-# CREATE THE SECURITY GROUP THAT'S APPLIED TO EACH EC2 INSTANCE IN THE ASG
+# Ensure that the instance is locked down and secure
+# Create the Security Group and apply to the EC2 Instance Created above
+# You can change the Inbound rules accordingly depending on the requirements of your project
 # ---------------------------------------------------------------------------------------------------------------------
 
 resource "aws_security_group" "instance" {
   name = "terraform-example-instance"
 
-  # Inbound HTTP from anywhere
-  ingress {
-    from_port   = var.server_port
-    to_port     = var.server_port
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# CREATE AN ELB TO ROUTE TRAFFIC ACROSS THE AUTO SCALING GROUP
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_elb" "example" {
-  name               = "terraform-asg-example"
-  security_groups    = [aws_security_group.elb.id]
-  availability_zones = data.aws_availability_zones.all.names
-
-  health_check {
-    target              = "HTTP:${var.server_port}/"
-    interval            = 30
-    timeout             = 3
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-  }
-
-  # This adds a listener for incoming HTTP requests.
-  listener {
-    lb_port           = var.elb_port
-    lb_protocol       = "http"
-    instance_port     = var.server_port
-    instance_protocol = "http"
-  }
-}
-
-# ---------------------------------------------------------------------------------------------------------------------
-# CREATE A SECURITY GROUP THAT CONTROLS WHAT TRAFFIC AN GO IN AND OUT OF THE ELB
-# ---------------------------------------------------------------------------------------------------------------------
-
-resource "aws_security_group" "elb" {
-  name = "terraform-example-elb"
-
-  # Allow all outbound
+    # Allow all outbound
   egress {
     from_port   = 0
     to_port     = 0
@@ -137,9 +74,32 @@ resource "aws_security_group" "elb" {
 
   # Inbound HTTP from anywhere
   ingress {
-    from_port   = var.elb_port
-    to_port     = var.elb_port
+    from_port   = var.server_port
+    to_port     = var.server_port
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+    ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
 }
