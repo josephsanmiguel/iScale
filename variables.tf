@@ -8,13 +8,13 @@
 variable "aws_access_key_id_var" {
   description = "AWS_ACCESS_KEY_ID"
   type        = string
-  default     = ENV_AWS_ACCESS_KEY_ID
+  default     = <ENV_AWS_ACCESS_KEY_ID>
 }
 
 variable "aws_secret_access_key_id_var" {
   description = "AWS_SECRET_ACCESS_KEY"
   type        = string
-  default     = ENV_AWS_ACCESS_KEY_ID
+  default     = <ENV_AWS_ACCESS_KEY_ID>
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
