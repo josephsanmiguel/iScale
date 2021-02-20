@@ -1,4 +1,4 @@
-output "public_ip" {
-  value       = aws_instance.example.public_ip
-  description = "The public IP of the web server"
+output "elastic_ip" {
+  value       = aws_eip.one.public_ip
+  description = "The Elastic IP of the web server"
 }
