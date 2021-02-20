@@ -1,17 +1,4 @@
-# Compiled files
-*.tfstate
-*.tfstate.backup
-
-# Module directory
-.terraform/
-
-# keys
-*id_rsa*
-
-.idea
-
-.DS_Store
-
-config-terraform.sh
-
-*.out
+.terraform
+terraform.tfstate
+*.tfstate*
+terraform.tfvars
