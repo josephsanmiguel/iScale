@@ -4,18 +4,11 @@
 # ENVIRONMENT VARIABLES
 # Define these secrets as environment variables
 # ---------------------------------------------------------------------------------------------------------------------
+#Do this for the credentials
 
-#variable "aws_access_key_id_var" {
-#  description = "AWS_ACCESS_KEY_ID"
-#  type        = string
-#  default     = <ENV_AWS_ACCESS_KEY_ID>
-#}
+#export AWS_ACCESS_KEY_ID=<place access key here>
+#export AWS_SECRET_ACCESS_KEY=<place secret key here> 
 
-#variable "aws_secret_access_key_id_var" {
-#  description = "AWS_SECRET_ACCESS_KEY"
-#  type        = string
-#  default     = <ENV_AWS_ACCESS_KEY_ID>
-#}
 
 # ---------------------------------------------------------------------------------------------------------------------
 # OPTIONAL PARAMETERS
@@ -26,3 +19,4 @@ variable "server_port" {
   type        = number
   default     = 8080
 }
+
